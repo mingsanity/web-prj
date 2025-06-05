@@ -17,23 +17,20 @@ const Login = () => {
     try {
       const res = await loginUser(email, password);
 
-      if (res && res.success) {
+      if (res.success) {
         alert(res.message);
 
-        // 🌟 Gọi API backend để lấy dữ liệu user từ email
-        const userRes = await fetch(`/api/user/search?q=${email}`, { credentials: 'include' });
+        const userRes = await fetch(`/api/user/search?email=${email}`, { credentials: 'include' });
         const userData = await userRes.json();
         if (userData.success && userData.data.length > 0) {
           const user = userData.data[0];
           localStorage.setItem('user', JSON.stringify(user));  //  Lưu user vào localStorage
-        } else {
+        } else 
           console.warn('Không tìm thấy thông tin user!');
-        }
 
         navigate('/home');
-      } else {
+      } else 
         setError(res.message || 'Đăng nhập không thành công');
-      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Lỗi đăng nhập');
     }

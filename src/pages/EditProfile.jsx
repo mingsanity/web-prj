@@ -1,34 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './EditProfile.css';
+import { useUpdateUser } from './api/use-update-user';
 
 const EditProfile = () => {
-  useEffect(() => {
-    document.title = 'Chỉnh sửa hồ sơ - CookBook';
-  }, []);
-
+  const userData = JSON.parse(localStorage.getItem('user'))
   // Giả lập dữ liệu user ban đầu
-  const [user, setUser] = useState({
-    displayName: 'vitwag',
-    email: 'quang.nvv173203@gmail.com',
-    dob: { day: '', month: '', year: '' },
-    gender: 'male',
-    bio: '',
-    avatarUrl: '', // Initial empty avatar URL
-    backgroundUrl: '' // Initial empty background URL
-  });
+  const [user, setUser] = useState(userData);
 
   // Các mảng chọn ngày tháng năm
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
+  const userDateOfBirth = new Date(userData.dateOfBirth)
+  const [date, setDate] = useState(userDateOfBirth.getDate())
+  const [month, setMonth] = useState(userDateOfBirth.getMonth())
+  const [year, setYear] = useState(userDateOfBirth.getFullYear())
+
+  const { updateUser } = useUpdateUser()
+
   // Hàm xử lý thay đổi giá trị input
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (['day', 'month', 'year'].includes(name)) {
+    if (name.includes('.')) {
+      const [key, subKey] = name.split('.');
       setUser(prev => ({
         ...prev,
-        dob: { ...prev.dob, [name]: value }
+        [key]: { ...prev[key], [subKey]: value }
       }));
     } else {
       setUser(prev => ({
@@ -55,13 +53,33 @@ const EditProfile = () => {
   };
 
   // Hàm submit (chưa kết nối API)
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: gọi API update profile
-    alert('Lưu thông tin thành công (demo)');
-    // Optionally, you might want to refresh the page or redirect after successful save
-    // window.location.reload(); // This would refresh the entire page
+    const userNewDateOfBirth = new Date(year, month, date)
+    const userNewData = {
+      ...user,
+      dateOfBirth: userNewDateOfBirth,
+      bio: {
+        ...user.bio,
+        currentPlaces: typeof user.bio.currentPlaces === 'string' ? user.bio.currentPlaces.split(',') : user.bio.currentPlaces
+      }
+    }
+    const response = await updateUser(userNewData)
+    if (response.success) {
+      alert('Lưu thông tin thành công');
+      localStorage.setItem('user', JSON.stringify(response.data._doc))
+      window.location.href = '/user/' + user._id
+    } else {
+      alert('Lưu thông tin thất bại');
+    }
   };
+
+  const handleSelectDOB = (e) => {
+    const { name, value } = e.target;
+    if (name === 'day') setDate(value)
+    else if (name === 'month') setMonth(value - 1)
+    else if (name === 'year') setYear(value)
+  }
 
   return (
     <div className="edit-profile-container">
@@ -138,27 +156,54 @@ const EditProfile = () => {
           />
         </div>
 
-        <div className="input-group dob-group">
-          <label>Ngày sinh</label>
-          <select name="day" value={user.dob.day} onChange={handleChange}>
-            <option value="">Ngày</option>
-            {days.map(day => <option key={day} value={day}>{day}</option>)}
-          </select>
-          <select name="month" value={user.dob.month} onChange={handleChange}>
-            <option value="">Tháng</option>
-            {months.map(month => <option key={month} value={month}>{month}</option>)}
-          </select>
-          <select name="year" value={user.dob.year} onChange={handleChange}>
-            <option value="">Năm</option>
-            {years.map(year => <option key={year} value={year}>{year}</option>)}
-          </select>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="input-group dob-group">
+            <label>Ngày sinh</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+            <select name="day" value={date} onChange={handleSelectDOB}>
+              <option value="">Ngày</option>
+              {days.map(day => <option key={day} value={day}>{day}</option>)}
+            </select>
+            <select name="month" value={month + 1} onChange={handleSelectDOB}>
+              <option value="">Tháng</option>
+              {months.map(month => <option key={month} value={month}>{month}</option>)}
+            </select>
+            <select name="year" value={year} onChange={handleSelectDOB}>
+              <option value="">Năm</option>
+              {years.map(year => <option key={year} value={year}>{year}</option>)}
+            </select>
+          </div>
+          <div className="input-group gender-group">
+            <label>Giới tính</label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input type="radio" name="gender" value="male" checked={user.gender === 'male'} onChange={handleChange} /> Nam
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input type="radio" name="gender" value="female" checked={user.gender === 'female'} onChange={handleChange} /> Nữ
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input type="radio" name="gender" value="other" checked={user.gender === 'other'} onChange={handleChange} /> Khác
+              </div>
+            </div>
+            </div>
+          </div>
         </div>
 
-        <div className="input-group gender-group">
-          <label>Giới tính</label>
-          <label><input type="radio" name="gender" value="male" checked={user.gender === 'male'} onChange={handleChange} /> Nam</label>
-          <label><input type="radio" name="gender" value="female" checked={user.gender === 'female'} onChange={handleChange} /> Nữ</label>
-          <label><input type="radio" name="gender" value="other" checked={user.gender === 'other'} onChange={handleChange} /> Khác</label>
+        <div className="input-group">
+          <label style={{ marginBottom: '10px' }}>Bio</label>
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '10px' }}>
+            <label>Việc làm</label>
+            <textarea name="bio.job" value={user.bio.job} onChange={handleChange} placeholder='Chỉnh sửa thông tin việc làm' style={{ height: '100px', padding: '10px' }}/>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '10px' }}>
+            <label>Học vấn</label>
+            <textarea name="bio.education" value={user.bio.education} onChange={handleChange} placeholder='Chỉnh sửa thông tin học vấn' style={{ height: '100px', padding: '10px' }}/>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '10px' }}>
+            <label>Địa chỉ hiện tại</label>
+            <textarea name="bio.currentPlaces" value={user.bio.currentPlaces} onChange={handleChange} placeholder='Chỉnh sửa địa chỉ hiện tại' style={{ height: '100px', padding: '10px' }}/>
+          </div>
         </div>
 
         <button type="submit" className="btn-save">Lưu thay đổi</button>

@@ -122,20 +122,11 @@
 
 .dob-group {
   display: flex;
-  gap: 10px;
 }
 
 .gender-group {
+  margin-top: 15px;
   display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 25px;
-}
-
-.gender-group label {
-  font-weight: normal;
-  font-size: 14px;
-  cursor: pointer;
 }
 
 .btn-save {

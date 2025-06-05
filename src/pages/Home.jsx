@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
-import HeaderMain from '../components/HeaderMain';
-import Navbar from '../components/NavBar';
-import SearchBar from '../components/SearchBar';
-import PostGrid from '../components/PostGrid';
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useEffect } from 'react';
+import HeaderMain from '../components/header-main';
+import Navbar from '../components/navbar';
+import SearchBar from '../components/search-bar';
+import PostGrid from '../components/post-grid';
+import { useGetPosts } from './api/use-get-posts';
 
-const Home = ({ allPosts }) => { // Receive allPosts as prop
+const Home = () => { // Receive allPosts as prop
   const [searchTerm, setSearchTerm] = useState('');
+  const [allPosts, setAllPosts] = useState([]);
+  const { getPosts } = useGetPosts()
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const posts = await getPosts()
+      setAllPosts(posts)
+    }
+    fetchPosts()
+  }, [])
 
   return (
     <>

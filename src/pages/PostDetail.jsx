@@ -1,23 +1,46 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/PostDetail.jsx
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import './PostDetail.css';
+import { useLikePost } from './api/use-like-post';
+import { useAddComment } from './api/use-add-comment';
+import { useFollowUser } from './api/use-follow-user';
+import { useGetPosts } from './api/use-get-posts';
 
-const PostDetail = ({ allPosts }) => {
+const PostDetail = () => {
+  const navigate = useNavigate()
   const { id } = useParams();
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [likes, setLikes] = useState(0); // Thêm state cho số lượt thích bài viết
   const [isLiked, setIsLiked] = useState(false); // Thêm state để kiểm tra người dùng đã thích hay chưa
+  const [hasAuthorBeenFollowed, setHasAuthorBeenFollowed] = useState(false);
+
+  const { getPosts } = useGetPosts()
+  const [allPosts, setAllPosts] = useState([])
 
   useEffect(() => {
-    const foundPost = allPosts.find(p => p.id === parseInt(id));
+    const fetchPosts = async () => {
+      const posts = await getPosts()
+      setAllPosts(posts)
+    } 
+    fetchPosts()
+  }, [])
+  
+  const { likePost } = useLikePost()
+  const { addComment } = useAddComment()
+  const user = JSON.parse(localStorage.getItem('user'))
+  const { followUser } = useFollowUser()
+
+  useEffect(() => {
+    const foundPost = allPosts.find(p => p._id === id);
 
     let content = '';
     if (foundPost) {
       switch (foundPost.id) {
-        case 1:
+        case allPosts[0]._id:
           content = `
             <h2>I. Giới thiệu về John Nash và Thuyết trò chơi</h2>
             <p>John Forbes Nash Jr. là một nhà toán học xuất sắc người Mỹ, nổi tiếng với những đóng góp mang tính cách mạng cho lý thuyết trò chơi, hình học vi phân và phương trình đạo hàm riêng. Công trình đột phá của ông về thuyết trò chơi đã giúp ông đoạt giải Nobel Kinh tế năm 1994, cùng với Reinhard Selten và John Harsanyi.</p>
@@ -39,7 +62,7 @@ const PostDetail = ({ allPosts }) => {
             <p>Mặc dù phải đối mặt với bệnh tâm thần trong phần lớn cuộc đời, John Nash vẫn để lại di sản khoa học vĩ đại, minh chứng cho sức mạnh của trí tuệ con người.</p>
           `;
           break;
-        case 8:
+        case allPosts[1]._id:
           content = `
             <p>Giữa một thế giới đầy biến động và phức tạp, nơi mà sự giả dối, toan tính đôi khi len lỏi vào mọi ngóc ngách của cuộc sống, việc giữ vững một tinh thần chân thành – dám nói thật, dám sống thật – là vô cùng đáng quý. Chủ nghĩa Khắc Kỷ dạy ta rằng: không có gì mạnh mẽ hơn sự chân thành. Nó không chỉ giúp ta bình an trong tâm hồn, mà còn xây dựng niềm tin bền vững với người khác.</p>
             <h2>I. Chân thành theo góc nhìn Khắc Kỷ</h2>
@@ -68,7 +91,7 @@ const PostDetail = ({ allPosts }) => {
             <blockquote>
               "Một trích dẫn ý nghĩa từ bài viết này."
             </blockquote>
-            <img src="${foundPost.img}" alt="Hình ảnh minh họa" class="post-content-image"/>
+            <img src="${foundPost.bookImage}" alt="Hình ảnh minh họa" class="post-content-image"/>
             <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
             <h3>Kết luận</h3>
             <p>Cảm ơn bạn đã đọc bài viết này. Hãy chia sẻ suy nghĩ của bạn ở phần bình luận bên dưới!</p>
@@ -80,103 +103,84 @@ const PostDetail = ({ allPosts }) => {
     if (foundPost) {
         setPost({ ...foundPost, content });
         document.title = `${foundPost.title} - Ứng dụng Blog`;
-        setComments([
+        const defaultComments = [
           // Thêm authorId giả lập cho các comment
-          { id: 1, author: 'Bạn đọc A', authorId: 201, text: 'Bài viết rất hay và ý nghĩa!', likes: 5, liked: false, replies: [] },
-          { id: 2, author: 'Độc giả B', authorId: 202, text: 'Tôi đồng ý với quan điểm của tác giả.', likes: 2, liked: true, replies: [
-            { id: 2.1, author: 'Admin', authorId: 999, text: 'Cảm ơn bạn đã đóng góp ý kiến!' }
-          ] },
-        ]);
+          { _id: '1', author: {displayName: 'Bạn đọc A', _id: new Date().getTime()}, content: 'Bài viết rất hay và ý nghĩa!', createdAt: '2025-03-10'},
+          { _id: '2', author: {displayName: 'Độc giả B', _id: new Date().getMilliseconds()}, content: 'Tôi đồng ý với quan điểm của tác giả.', createdAt: '2021-05-04'},
+        ]
+        const postComments = foundPost.comments.map(comment => ({
+          _id: comment._id,
+          author: {displayName: comment.author.displayName, _id: comment.author._id},
+          content: comment.content,
+          createdAt: comment.createdAt.split('T')[0],
+        }))
+        setComments([...defaultComments, ...postComments]);
         // Thiết lập số lượt thích ban đầu và trạng thái đã thích (giả lập)
-        setLikes(foundPost.initialLikes || 10); // Giả lập có 10 lượt thích ban đầu
-        setIsLiked(false); // Giả lập ban đầu người dùng chưa thích
+        setLikes(foundPost.likes.length || 10); // Giả lập có 10 lượt thích ban đầu
+        setIsLiked(foundPost.likes.some(like => like._id === user._id)); // Giả lập ban đầu người dùng chưa thích
+        setHasAuthorBeenFollowed(foundPost.author.followers.some(follower => follower === user._id))
     } else {
         setPost(null);
         document.title = 'Bài viết không tìm thấy - Ứng dụng Blog';
     }
-  }, [id, allPosts]);
+  }, [id, allPosts, user._id]);
 
   const handleCommentSubmit = (e) => {
     e.preventDefault();
     if (newComment.trim()) {
-      const user = JSON.parse(localStorage.getItem('user'));
       const commentAuthor = user ? user.displayName : 'Người dùng ẩn danh';
-      const commentAuthorId = user ? user.id : null; // Lấy ID của người dùng nếu có
-      setComments([...comments, { id: Date.now(), author: commentAuthor, authorId: commentAuthorId, text: newComment, likes: 0, liked: false, replies: [] }]);
+      const commentAuthorId = user ? user._id : null; // Lấy ID của người dùng nếu có
+      const newCommetnt = { id: Date.now(), author: {displayName: commentAuthor, _id: commentAuthorId}, content: newComment, createdAt: new Date().toISOString().split('T')[0] }
+      setComments([...comments, newCommetnt]);
       setNewComment('');
+      addComment(post._id, newCommetnt)
     }
-  };
-
-  const handleLikeComment = (commentId) => {
-    setComments(comments.map(comment =>
-      comment.id === commentId
-        ? { ...comment, likes: comment.liked ? comment.likes - 1 : comment.likes + 1, liked: !comment.liked }
-        : comment
-    ));
   };
 
   // Hàm xử lý khi click nút Like bài viết
   const handleLikePost = () => {
-    if (isLiked) {
-      setLikes(prevLikes => prevLikes - 1);
-    } else {
+    if (isLiked) return
+    else {
       setLikes(prevLikes => prevLikes + 1);
+      likePost(post._id)
     }
     setIsLiked(prevIsLiked => !prevIsLiked);
     // Trong ứng dụng thực tế, bạn sẽ gửi yêu cầu API đến backend để cập nhật lượt thích
   };
 
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyText, setReplyText] = useState('');
-
-  const handleReplySubmit = (e, parentCommentId) => {
-    e.preventDefault();
-    if (replyText.trim()) {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const replyAuthor = user ? user.displayName : 'Người dùng ẩn danh';
-      const replyAuthorId = user ? user.id : null; // Lấy ID của người dùng nếu có
-      setComments(comments.map(comment =>
-        comment.id === parentCommentId
-          ? {
-              ...comment,
-              replies: [...comment.replies, { id: Date.now(), author: replyAuthor, authorId: replyAuthorId, text: replyText }]
-            }
-          : comment
-      ));
-      setReplyText('');
-      setReplyingTo(null);
-    }
-  };
-
-  if (!post) {
-    return <h2 className="post-detail-message">Đang tải bài viết hoặc không tìm thấy...</h2>;
+  const handleFollowUser = () => {
+    if (hasAuthorBeenFollowed) setHasAuthorBeenFollowed(false)
+    else setHasAuthorBeenFollowed(true)
+    followUser(post.author._id, user)
   }
+
+  if (!post) 
+    return <h2 className="post-detail-message">Đang tải bài viết hoặc không tìm thấy...</h2>;
 
   return (
     <div className="post-detail-container">
+      <button onClick={() => navigate('/home')} className='back-btn'>Quay lại</button>
       <div className="post-detail-header">
         <h1>{post.title}</h1>
       </div>
 
       <div className="author-section">
         <div className="author-info">
-          {post.authorId ? (
-            <Link to={`/user/${post.authorId}`} className="author-link">
-              <strong>{post.author}</strong>
+          {post.author._id ? (
+            <Link to={`/user/${post.author._id}`} className="author-link">
+              <strong>{post.author.displayName}</strong>
             </Link>
           ) : (
-            <strong>{post.author}</strong>
+            <strong>{post.author.displayName}</strong>
           )}
-          <p>{post.views} • {post.time}</p>
-          <button className="follow-btn">+ Theo dõi</button>
+          <button className="follow-btn" onClick={handleFollowUser}>{hasAuthorBeenFollowed ? 'Đã theo dõi' : '+ Theo dõi'}</button>
         </div>
       </div>
 
-      {post.img && <img src={post.img} alt={post.title} className="post-main-image" />}
+      {post.bookImage && <img src={post.bookImage} alt={post.title} className="post-main-image" />}
 
       <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }}></div>
 
-      {/* Phần Like bài viết */}
       <div className="post-actions-bottom">
         <button
           className={`like-post-btn ${isLiked ? 'liked' : ''}`}
@@ -186,7 +190,6 @@ const PostDetail = ({ allPosts }) => {
         </button>
       </div>
 
-      {/* Phần bình luận */}
       <div className="comments-section">
         <h3>Bình luận</h3>
         <form onSubmit={handleCommentSubmit} className="comment-form">
@@ -204,65 +207,18 @@ const PostDetail = ({ allPosts }) => {
             <p className="no-comments">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
           ) : (
             comments.map(comment => (
-              <div key={comment.id} className="comment-item">
+              <div key={comment._id} className="comment-item">
                 <div className="comment-main-content">
-                  {/* Link tên tác giả bình luận đến trang cá nhân */}
-                  {comment.authorId ? (
-                    <Link to={`/user/${comment.authorId}`} className="comment-author-link">
-                      <p className="comment-author"><strong>{comment.author}</strong></p>
+                  {comment.author._id ? (
+                    <Link to={`/user/${comment.author._id}`} className="comment-author-link" style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                      <p className="comment-author"><strong>{comment.author.displayName}</strong></p>
+                      <p style={{color: '#666', fontSize: '12px'}}> - {comment.createdAt}</p>
                     </Link>
                   ) : (
-                    <p className="comment-author"><strong>{comment.author}</strong></p>
+                    <p className="comment-author"><strong>{comment.author.displayName}</strong></p>
                   )}
-                  <p className="comment-text">{comment.text}</p>
+                  <p className="comment-text">{comment.content}</p>
                 </div>
-                <div className="comment-actions">
-                  <button
-                    className={`like-btn ${comment.liked ? 'liked' : ''}`}
-                    onClick={() => handleLikeComment(comment.id)}
-                  >
-                    Thích {comment.likes > 0 && `(${comment.likes})`}
-                  </button>
-                  <button
-                    className="reply-btn"
-                    onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                  >
-                    Trả lời
-                  </button>
-                </div>
-
-                {/* Form trả lời */}
-                {replyingTo === comment.id && (
-                  <form onSubmit={(e) => handleReplySubmit(e, comment.id)} className="reply-form">
-                    <textarea
-                      placeholder="Viết trả lời của bạn..."
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      rows="2"
-                    ></textarea>
-                    <button type="submit">Gửi trả lời</button>
-                    <button type="button" onClick={() => setReplyingTo(null)} className="cancel-reply-btn">Hủy</button>
-                  </form>
-                )}
-
-                {/* Hiển thị các câu trả lời */}
-                {comment.replies.length > 0 && (
-                  <div className="comment-replies">
-                    {comment.replies.map(reply => (
-                      <div key={reply.id} className="reply-item">
-                        {/* Link tên tác giả trả lời đến trang cá nhân */}
-                        {reply.authorId ? (
-                          <Link to={`/user/${reply.authorId}`} className="reply-author-link">
-                            <p className="reply-author"><strong>{reply.author}</strong></p>
-                          </Link>
-                        ) : (
-                          <p className="reply-author"><strong>{reply.author}</strong></p>
-                        )}
-                        <p className="reply-text">{reply.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             ))
           )}

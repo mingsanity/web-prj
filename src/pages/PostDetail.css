@@ -73,6 +73,18 @@
   background-color: #0056b3;
 }
 
+.back-btn {
+  padding: 8px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background-color: #ddd;
+}
+
 .post-main-image { /* Style for the main image if it exists */
   max-width: 100%;
   height: auto;
