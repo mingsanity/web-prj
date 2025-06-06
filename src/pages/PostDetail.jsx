@@ -116,7 +116,7 @@ const PostDetail = () => {
         }))
         setComments([...defaultComments, ...postComments]);
         // Thiết lập số lượt thích ban đầu và trạng thái đã thích (giả lập)
-        setLikes(foundPost.likes.length || 10); // Giả lập có 10 lượt thích ban đầu
+        setLikes(foundPost.likes.length || 0); // Giả lập có 10 lượt thích ban đầu
         setIsLiked(foundPost.likes.some(like => like._id === user._id)); // Giả lập ban đầu người dùng chưa thích
         setHasAuthorBeenFollowed(foundPost.author.followers.some(follower => follower === user._id))
     } else {
