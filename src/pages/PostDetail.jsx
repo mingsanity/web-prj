@@ -139,11 +139,9 @@ const PostDetail = () => {
 
   // Hàm xử lý khi click nút Like bài viết
   const handleLikePost = () => {
-    if (isLiked) return
-    else {
-      setLikes(prevLikes => prevLikes + 1);
-      likePost(post._id)
-    }
+    if (isLiked) setLikes(prevLikes => prevLikes - 1)
+    else setLikes(prevLikes => prevLikes + 1);
+    likePost(post._id)
     setIsLiked(prevIsLiked => !prevIsLiked);
     // Trong ứng dụng thực tế, bạn sẽ gửi yêu cầu API đến backend để cập nhật lượt thích
   };
